@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: apsivra-postgres
+    environment:
+      POSTGRES_USER: apsivra
+      POSTGRES_PASSWORD: apsivra_dev
+      POSTGRES_DB: apsivra
+    ports:
+      - "5433:5432"
+    volumes:
+      - apsivra_pg_data:/var/lib/postgresql/data
+
+volumes:
+  apsivra_pg_data:
