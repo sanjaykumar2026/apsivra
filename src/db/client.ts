@@ -1,9 +1,10 @@
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as {
   apsivraSql?: ReturnType<typeof postgres>;
+  apsivraDb?: PostgresJsDatabase<typeof schema>;
 };
 
 function createClient() {
@@ -14,10 +15,18 @@ function createClient() {
   return postgres(url, { max: 5 });
 }
 
-const sql = globalForDb.apsivraSql ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.apsivraSql = sql;
+function getDb() {
+  if (!globalForDb.apsivraDb) {
+    const sql = globalForDb.apsivraSql ?? createClient();
+    globalForDb.apsivraSql = sql;
+    globalForDb.apsivraDb = drizzle(sql, { schema });
+  }
+  return globalForDb.apsivraDb;
 }
 
-export const db = drizzle(sql, { schema });
+/** Lazy so `next build` can load route modules before Amplify injects DATABASE_URL. */
+export const db = new Proxy({} as PostgresJsDatabase<typeof schema>, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getDb(), prop, receiver);
+  },
+});
